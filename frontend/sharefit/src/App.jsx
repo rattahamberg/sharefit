@@ -10,7 +10,7 @@ import OutfitView from "./pages/OutfitView";
 import CreateOutfit from "./pages/CreateOutfit";
 import Layout from "./components/Layout";
 
-const isAuthed = false;
+const isAuthed = true;
 
 export default function App() {
     return (
