@@ -93,6 +93,24 @@ router.post('/:id/comments', requireAuth, async (req, res) => {
     res.status(201).json({ ok: true });
 });
 
+// Batched: get the current user's vote for many outfits
+router.post('/votes', requireAuth, async (req, res) => {
+    const ids = Array.isArray(req.body?.ids) ? req.body.ids : [];
+    if (!ids.length) return res.json({ votes: {} });
+    const docs = await Outfit.find(
+        { _id: { $in: ids } },
+        { _id: 1, votes: 1 }
+    ).lean();
+    const uid = String(req.user._id);
+    const out = {};
+    for (const d of docs) {
+        const map = d.votes || {};
+        const val = (map instanceof Map) ? map.get(uid) : map[uid];
+        out[String(d._id)] = typeof val === 'number' ? val : 0;
+    }
+    res.json({ votes: out });
+});
+
 // Search: ?q=&tag=&poster=
 router.get('/', async (req, res) => {
     const { q, tag, poster } = req.query;

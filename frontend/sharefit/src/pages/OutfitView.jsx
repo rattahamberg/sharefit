@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useParams } from "react-router-dom";
 import UserAvatar from "../components/UserAvatar";
 import { api } from "../lib/api";
@@ -20,19 +20,27 @@ function adaptOutfitDetail(doc) {
             text: c.text,
             createdAt: c.createdAt
         })),
-        // raw map if we want to read current vote
         _votes: doc.votes || {}
     };
 }
 
 export default function OutfitView() {
     const { id } = useParams();
-    const { user } = useAuth(); // expects { id, username, profilePictureUrl, ... }
+    const { user, updateSaved } = useAuth(); // updateSaved added earlier in AuthContext
     const [outfit, setOutfit] = useState(null);
     const [rating, setRating] = useState(0);
     const [vote, setVote] = useState(0); // -1, 0, 1
     const [comment, setComment] = useState("");
     const [err, setErr] = useState("");
+    const [busy, setBusy] = useState(false);
+
+    // Saved toggle state (keeps in sync with context)
+    const initiallySaved = useMemo(
+        () => Boolean(user?.savedOutfitIds?.includes?.(id)),
+        [user?.savedOutfitIds, id]
+    );
+    const [saved, setSaved] = useState(initiallySaved);
+    useEffect(() => setSaved(initiallySaved), [initiallySaved]);
 
     useEffect(() => {
         let ignore = false;
@@ -43,7 +51,6 @@ export default function OutfitView() {
                 const o = adaptOutfitDetail(doc);
                 setOutfit(o);
                 setRating(o.rating);
-                // pre-highlight my vote if we know my user id
                 if (user?.id && o._votes && typeof o._votes[user.id] !== "undefined") {
                     setVote(o._votes[user.id] || 0);
                 } else {
@@ -61,14 +68,37 @@ export default function OutfitView() {
     }
 
     const onRate = async (next) => {
+        if (busy) return;
+        setBusy(true);
         try {
-            // toggle if same button clicked twice
             const send = vote === next ? 0 : next;
             const { rating } = await api(`/outfits/${id}/rate`, { method: "POST", body: { value: send } });
             setVote(send);
             setRating(rating);
         } catch (e) {
             setErr(e?.message || "Failed to rate");
+        } finally {
+            setBusy(false);
+        }
+    };
+
+    const onToggleSave = async () => {
+        if (busy) return;
+        setBusy(true);
+        try {
+            if (saved) {
+                await api(`/outfits/${id}/unsave`, { method: "POST" });
+                setSaved(false);
+                updateSaved(id, false);
+            } else {
+                await api(`/outfits/${id}/save`, { method: "POST" });
+                setSaved(true);
+                updateSaved(id, true);
+            }
+        } catch (e) {
+            setErr(e?.message || "Failed to toggle save");
+        } finally {
+            setBusy(false);
         }
     };
 
@@ -77,7 +107,6 @@ export default function OutfitView() {
         if (!comment.trim()) return;
         try {
             await api(`/outfits/${id}/comments`, { method: "POST", body: { text: comment.trim() } });
-            // append locally; server already stores username/avatar from req.user
             setOutfit(prev => ({
                 ...prev,
                 comments: [...prev.comments, { username: user.username, avatar: user.profilePictureUrl || "", text: comment.trim() }]
@@ -120,7 +149,7 @@ export default function OutfitView() {
             </div>
 
             <aside className="panel" style={{ flex: 1, minWidth: 280 }}>
-                <div className="toolbar">
+                <div className="toolbar" style={{ gap: 8 }}>
                     <div className="section-title">Rating: {rating}</div>
                     <div style={{ display: "flex", gap: 8 }}>
                         <button
@@ -128,6 +157,7 @@ export default function OutfitView() {
                             data-pressed={vote === 1}
                             aria-pressed={vote === 1}
                             onClick={() => onRate(1)}
+                            disabled={busy}
                             title="Like"
                         >👍</button>
                         <button
@@ -135,8 +165,17 @@ export default function OutfitView() {
                             data-pressed={vote === -1}
                             aria-pressed={vote === -1}
                             onClick={() => onRate(-1)}
+                            disabled={busy}
                             title="Dislike"
                         >👎</button>
+                        <button
+                            className="btn secondary"
+                            data-pressed={saved}
+                            aria-pressed={saved}
+                            onClick={onToggleSave}
+                            disabled={busy}
+                            title={saved ? "Unsave" : "Save"}
+                        >★</button>
                     </div>
                 </div>
 

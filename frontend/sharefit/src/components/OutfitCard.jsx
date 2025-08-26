@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import UserAvatar from "./UserAvatar";
 import { api } from "../lib/api";
 import { useAuth } from "../context/AuthContext";
@@ -13,9 +13,16 @@ export default function OutfitCard({ outfit }) {
     );
 
     const [rating, setRating] = useState(outfit.rating ?? 0);
-    const [vote, setVote] = useState(0);          // unknown initially; will reflect after user clicks
+    const [vote, setVote] = useState(outfit.userVote ?? 0);          // unknown initially; will reflect after user clicks
     const [saved, setSaved] = useState(initiallySaved);
+
+    useEffect(() => {
+        setSaved(Boolean(user?.savedOutfitIds?.includes?.(outfit.id)));
+        }, [user?.savedOutfitIds, outfit.id]);
+
     const [busy, setBusy] = useState(false);
+
+    useEffect(() => { setVote(outfit.userVote ?? 0); }, [outfit.userVote]);
 
     async function onRate(next) {
         if (busy) return;
