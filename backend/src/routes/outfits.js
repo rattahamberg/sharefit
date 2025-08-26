@@ -101,6 +101,12 @@ router.get('/', async (req, res) => {
     if (tag) filter.tags = tag;
     if (poster) filter.posterUsername = poster;
 
+    // safe regex helper
+    const esc = s => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+    if (poster) filter.posterUsername = { $regex: new RegExp(`^${esc(poster)}$`, 'i') };
+    if (tag) filter.tags = { $elemMatch: { $regex: new RegExp(`^${esc(tag)}$`, 'i') } };
+
     const outfits = await Outfit.find(filter).sort({ createdAt: -1 }).limit(100).lean();
     res.json({ outfits });
 });

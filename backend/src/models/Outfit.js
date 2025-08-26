@@ -31,4 +31,6 @@ const outfitSchema = new mongoose.Schema({
     comments: { type: [commentSchema], default: [] }
 }, { timestamps: true });
 
+outfitSchema.index({ posterUsername: 1 });
+
 export default mongoose.model('Outfit', outfitSchema);

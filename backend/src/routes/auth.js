@@ -13,8 +13,8 @@ router.post('/register', async (req, res) => {
     const parse = registerSchema.safeParse(req.body);
     if (!parse.success) return res.status(400).json({ error: parse.error.flatten() });
 
-    const { username, password, profilePictureUrl = ''} = parse.data;
-    const exists = await User.findOne({username});
+    const { username, password, profilePictureUrl = '' } = parse.data;
+    const exists = await User.findOne({ username });
     if (exists) return res.status(409).json({ error: 'Username already taken' });
 
     const passwordHash = await bcrypt.hash(password, 12);
@@ -22,65 +22,65 @@ router.post('/register', async (req, res) => {
     res.status(201).json({ ok: true, user: { username: user.username, profilePictureUrl: user.profilePictureUrl } });
 });
 
-// generate TOTP secret + QR
-router.post('/totp/setup', async(req, res) => {
+// Step 1: generate TOTP secret + QR
+router.post('/totp/setup', async (req, res) => {
     const { username } = req.body;
     if (!username) return res.status(400).json({ error: 'username required' });
 
-    const user = await User.findOne({username});
-    if (!user) return res.status(404).json({ error: 'user not found' });
+    const user = await User.findOne({ username });
+    if (!user) return res.status(404).json({ error: 'User not found' });
 
-    const secret = speakeasy.generateSecret({ name: `ShareFit: (${username})`});
-    // dont enable yet; user must verify with code
+    const secret = speakeasy.generateSecret({ name: `ShareFit (${username})` });
+    // we don’t enable yet; user must verify with a code
     const otpauth = secret.otpauth_url;
     const qr = await qrcode.toDataURL(otpauth);
     // temporarily return secret; client will POST code to verify
     res.json({ qr, base32: secret.base32 });
 });
 
-// verify code and store secret
-router.post('totp/verify', async (req, res) => {
+// Step 2: verify code and store secret
+router.post('/totp/verify', async (req, res) => {
     const { username, base32, code } = req.body;
-    if (!username || !base32 || !code) return res.status(400).json({ error: 'username, base32, and code required' });
+    if (!username || !base32 || !code) return res.status(400).json({ error: 'username, base32 and code required' });
 
-    const user = await User.findOne({username});
-    if (!user) return res.status(404).json({ error: 'user not found' });
+    const user = await User.findOne({ username });
+    if (!user) return res.status(404).json({ error: 'User not found' });
 
     const ok = speakeasy.totp.verify({ secret: base32, encoding: 'base32', token: code, window: 1 });
-    if (!ok) return res.status(401).json({ error: 'invalid code' });
+    if (!ok) return res.status(400).json({ error: 'Invalid code' });
 
     user.totp = { secret: base32, enabled: true };
     await user.save();
     res.json({ ok: true });
 });
 
-//login: username + password (+TOTP if enabled)
+// Login: username + password (+ TOTP if enabled)
 router.post('/login', async (req, res) => {
     const parse = loginSchema.safeParse(req.body);
     if (!parse.success) return res.status(400).json({ error: parse.error.flatten() });
 
     const { username, password, code } = parse.data;
-    const user = await User.findOne({username});
-    if (!user) return res.status(401).json({ error: 'invalid credentials' });
+    const user = await User.findOne({ username });
+    if (!user) return res.status(401).json({ error: 'Invalid credentials' });
 
     const match = await bcrypt.compare(password, user.passwordHash);
-    if (!match) return res.status(401).json({ error: 'invalid credentials' });
+    if (!match) return res.status(401).json({ error: 'Invalid credentials' });
 
     if (user.totp.enabled) {
-        if (!code) return res.status(400).json({ error: 'TOTP code required'});
+        if (!code) return res.status(400).json({ error: 'TOTP code required' });
         const ok = (code && speakeasy.totp.verify({
             secret: user.totp.secret, encoding: 'base32', token: code, window: 1
         }));
-        if (!ok) return res.status(401).json({ error: 'invalid TOTP code' });
+        if (!ok) return res.status(401).json({ error: 'Invalid TOTP code' });
     }
 
     const token = signAuthToken(user);
     res.cookie('token', token, {
         httpOnly: true,
         sameSite: 'lax',
-        secure: false
+        secure: false // set true in production behind HTTPS
     });
-    res.json({ ok: true, user: { username: user.username, profilePictureUrl: user.profilePictureUrl}});
+    res.json({ ok: true, user: { username: user.username, profilePictureUrl: user.profilePictureUrl } });
 });
 
 router.post('/logout', (req, res) => {

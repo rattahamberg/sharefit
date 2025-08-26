@@ -9,40 +9,29 @@ import Search from "./pages/Search";
 import OutfitView from "./pages/OutfitView";
 import CreateOutfit from "./pages/CreateOutfit";
 import Layout from "./components/Layout";
-
-const isAuthed = true;
+import { AuthProvider } from "./context/AuthContext";
+import PrivateRoute from "./components/PrivateRoute";
 
 export default function App() {
     return (
-        <Layout>
-            <Routes>
-                <Route path="/" element={<Landing />} />
-                <Route path="/login" element={<Login />} />
-                <Route path="/register" element={<Register />} />
-                <Route path="/2fa/setup" element={<TwoFASetup />} />
-                <Route path="/2fa/verify" element={<TwoFAVerify />} />
+        <AuthProvider>
+            <Layout>
+                <Routes>
+                    <Route path="/" element={<Landing />} />
+                    <Route path="/login" element={<Login />} />
+                    <Route path="/register" element={<Register />} />
+                    <Route path="/2fa/setup" element={<TwoFASetup />} />
+                    <Route path="/2fa/verify" element={<TwoFAVerify />} />
 
-                {/* Protected Routes */}
+                    {/* Protected */}
+                    <Route path="/dashboard" element={<PrivateRoute element={<Dashboard />} />} />
+                    <Route path="/search" element={<PrivateRoute element={<Search />} />} />
+                    <Route path="/outfits/:id" element={<PrivateRoute element={<OutfitView />} />} />
+                    <Route path="/create" element={<PrivateRoute element={<CreateOutfit />} />} />
 
-                <Route
-                    path="/dashboard"
-                    element={isAuthed ? <Dashboard /> : <Navigate to="/login" replace/>}
-                />
-                <Route
-                    path="/search"
-                    element={isAuthed ? <Search /> : <Navigate to="/login" replace/>}
-                />
-                <Route
-                    path="/outfits/:id"
-                    element={isAuthed ? <OutfitView /> : <Navigate to="/login" replace/>}
-                />
-                <Route
-                    path="/create"
-                    element={isAuthed ? <CreateOutfit /> : <Navigate to="/login" replace/>}
-                />
-
-                <Route path="*" element={<Navigate to="/" replace/>} />
-            </Routes>
-        </Layout>
-    )
+                    <Route path="*" element={<Navigate to="/" replace />} />
+                </Routes>
+            </Layout>
+        </AuthProvider>
+    );
 }
