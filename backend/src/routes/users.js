@@ -63,7 +63,7 @@ router.patch('/me', requireAuth, async (req, res) => {
                 "comments.$[c].profilePictureUrl": newAvatar
             }
         },
-        {arrayFilters: [{"c.userId": uid}]}
+        {arrayFilters: [{"c.userId": uid, "c.deleted": {$ne: true}}]}
     );
 
     // Re-issue JWT so token.username matches

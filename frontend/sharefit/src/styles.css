@@ -116,3 +116,13 @@ a {
   color: var(--muted);
   font-size: 12px;
 }
+
+.panel + .panel { border-left: 2px solid var(--border); }
+
+.panel { overflow: hidden; }
+
+.comment-block, .comment, .comment-text {
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
