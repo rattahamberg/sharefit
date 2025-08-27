@@ -54,7 +54,7 @@ router.post('/totp/verify', async (req, res) => {
     res.json({ ok: true });
 });
 
-// Login: username + password (+ TOTP if enabled)
+// Login: username + password + TOTP
 router.post('/login', async (req, res) => {
     const parse = loginSchema.safeParse(req.body);
     if (!parse.success) return res.status(400).json({ error: parse.error.flatten() });
