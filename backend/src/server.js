@@ -23,7 +23,7 @@ app.use(morgan('dev'));
 app.use(express.json({limit: '1mb'}));
 app.use(cookieParser());
 
-const limiter = rateLimit({windowMs: 15*60*1000, max:200});
+const limiter = rateLimit({windowMs: 15*60, max:200});
 app.use(limiter);
 
 app.get('/health', (_,res)=>res.json({ok:true}));
