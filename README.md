@@ -1,4 +1,4 @@
-#Project Description
+# Project Description
 
 This project is a full-stack outfit sharing web application built for CS 110 (Web Development Principles). It allows users to:
 Create an account and manage a personal profile
